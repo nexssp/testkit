@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 	"testing"
@@ -21,24 +22,79 @@ type StreamCapture struct {
 	cancel context.CancelFunc
 }
 
-// ListenSSE connects to an SSE endpoint, unblocking immediately on initial HTTP response.
+// ListenSSE connects to an SSE endpoint using GET.
 func (s *Suite) ListenSSE(path string) *StreamCapture {
 	s.T.Helper()
+
+	return s.listenSSE(s.T, func(ctx context.Context) *http.Request {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.baseURL+path, http.NoBody)
+		if err != nil {
+			s.T.Fatalf("ListenSSE: failed to build request: %v", err)
+		}
+		req.Header.Set("Accept", "text/event-stream")
+		return req
+	})
+}
+
+// ListenSSEWithRequest connects to an SSE endpoint using a custom HTTP request.
+// This supports POST + SSE patterns such as MCP Streamable HTTP and A2A.
+func (s *Suite) ListenSSEWithRequest(t testing.TB, req *http.Request) *StreamCapture {
+	t.Helper()
+
+	return s.listenSSE(t, func(ctx context.Context) *http.Request {
+		cloned := req.Clone(ctx)
+
+		// httptest.NewRequest creates a server-side request.
+		// http.Client.Do requires RequestURI to be empty.
+		cloned.RequestURI = ""
+
+		if req.URL != nil {
+			u := *req.URL
+			cloned.URL = &u
+		} else {
+			cloned.URL = &url.URL{}
+		}
+
+		s.setBaseURL(t, cloned)
+
+		if cloned.Header.Get("Accept") == "" {
+			cloned.Header.Set("Accept", "text/event-stream")
+		}
+
+		return cloned
+	})
+}
+
+func (s *Suite) setBaseURL(t testing.TB, req *http.Request) {
+	t.Helper()
+
+	base, err := url.Parse(s.baseURL)
+	if err != nil {
+		t.Fatalf("ListenSSE: invalid base URL %q: %v", s.baseURL, err)
+	}
+
+	req.URL.Scheme = base.Scheme
+	req.URL.Host = base.Host
+
+	if req.URL.Path == "" {
+		req.URL.Path = "/"
+	}
+	if !strings.HasPrefix(req.URL.Path, "/") {
+		req.URL.Path = "/" + req.URL.Path
+	}
+}
+
+func (s *Suite) listenSSE(t testing.TB, buildReq func(ctx context.Context) *http.Request) *StreamCapture {
+	t.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	streamCap := &StreamCapture{
 		events: make(chan SSEEvent, 100),
 		cancel: cancel,
 	}
-	s.T.Cleanup(streamCap.Close)
+	t.Cleanup(streamCap.Close)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, s.baseURL+path, http.NoBody)
-	if err != nil {
-		cancel()
-		s.T.Fatalf("ListenSSE: failed to build request: %v", err)
-	}
-
-	req.Header.Set("Accept", "text/event-stream")
+	req := buildReq(ctx)
 
 	s.mu.RLock()
 	for k, v := range s.headers {
@@ -54,7 +110,6 @@ func (s *Suite) ListenSSE(path string) *StreamCapture {
 
 	go func() {
 		resp, err := s.client.Do(req)
-		// Close ready on ANY response arrival to prevent hangs on error status codes
 		readyOnce.Do(func() { close(ready) })
 
 		if err != nil {
@@ -98,7 +153,7 @@ func (s *Suite) ListenSSE(path string) *StreamCapture {
 	case <-ready:
 	case <-time.After(3 * time.Second):
 		streamCap.Close()
-		s.T.Fatalf("ListenSSE: timed out waiting for SSE connection on %s", path)
+		t.Fatalf("ListenSSE: timed out waiting for SSE connection on %s", req.URL.Path)
 	}
 
 	return streamCap

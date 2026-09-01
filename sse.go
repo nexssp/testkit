@@ -121,6 +121,30 @@ func (sc *StreamCapture) WaitFor(t testing.TB, eventName string, timeout time.Du
 	}
 }
 
+func (sc *StreamCapture) WaitForData(t testing.TB, substr string, timeout time.Duration) SSEEvent {
+	t.Helper()
+	deadline := time.After(timeout)
+
+	for {
+		select {
+		case evt := <-sc.events:
+			if strings.Contains(evt.Data, substr) {
+				return evt
+			}
+		case <-deadline:
+			t.Fatalf("ListenSSE: timed out after %v waiting for data containing %q", timeout, substr)
+			return SSEEvent{}
+		}
+	}
+}
+
+// Endpoint conveniently extracts an MCP SSE endpoint event.
+func (sc *StreamCapture) Endpoint(t testing.TB, timeout time.Duration) string {
+	t.Helper()
+	evt := sc.WaitFor(t, "endpoint", timeout)
+	return strings.TrimSpace(evt.Data)
+}
+
 func (sc *StreamCapture) Close() {
 	sc.cancel()
 }

@@ -1,0 +1,49 @@
+version: "2"
+run:
+  tests: true
+linters:
+  enable:
+    - bodyclose
+    - contextcheck
+    - gocritic
+    - prealloc
+    - revive
+  settings:
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+      disabled-checks:
+        - unnamedResult
+        - paramTypeCombine
+        - hugeParam
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gocritic
+          - prealloc
+          - revive
+        path: _test\.go
+    paths:
+      - vendor
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - vendor

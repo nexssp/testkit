@@ -15,6 +15,7 @@ One harness works with:
 | **`nexssp/kernel` actions** | Auto-mount actions, context bridge for tenant/user, route discovery |
 | **Standard `http.Handler`** | Works with Chi, Gin, Echo, stdlib `http.ServeMux` — zero kernel required |
 | **Live E2E URLs** | Black-box staging/prod tests using the exact same fluent DSL |
+| **JSON-RPC / Stdio transports** | Test line-delimited protocols (MCP stdio, custom JSON-RPC) with a real client |
 
 ### Why testkit outperforms ordinary testing setups
 
@@ -26,6 +27,7 @@ One harness works with:
 - 📡 **SSE capture** — test realtime event streams natively
 - 💣 **Chaos injection** — latency, 503s, and panics with a few lines
 - 🧩 **Deterministic retry scripting** — unit-test circuit breakers without fakes
+- 🔌 **JSON-RPC / Stdio testing** — test non-HTTP transports with the same real-client style
 
 ### The developer experience
 
@@ -84,6 +86,7 @@ go get github.com/nexssp/testkit@latest
 9. [Concurrency & Thundering-Herd Barriers](#9-concurrency--thundering-herd-barriers)
 10. [In-Process Load Testing & P99 Latency Profiling](#10-in-process-load-testing--p99-latency-profiling)
 11. [Chaos & Fault Injection](#11-chaos--fault-injection)
+12. [Testing JSON-RPC / Stdio Transports](#12-testing-json-rpc--stdio-transports)
 
 ---
 
@@ -317,6 +320,17 @@ func TestRealtimeTelemetry_SSE(t *testing.T) {
 }
 ```
 
+For MCP-style SSE handshakes, `Endpoint()` extracts the `event: endpoint` data, and `WaitForData()` blocks until an event contains a substring:
+
+```go
+stream := suite.ListenSSE("/mcp/sse")
+endpoint := stream.Endpoint(t, 2*time.Second) // "/mcp/message?sessionId=..."
+
+// POST to endpoint...
+
+msg := stream.WaitForData(t, "result", 2*time.Second)
+```
+
 ---
 
 ## 8. Deterministic Scripting & Hook Event Recording
@@ -487,6 +501,65 @@ func TestResilience_UnderNetworkChaos(t *testing.T) {
     suite.POST("/v1/orders", map[string]any{"sku": "A"}).
         Do().
         ExpectSuccess()
+}
+```
+
+---
+
+## 12. Testing JSON-RPC / Stdio Transports
+
+Use `testkit/rpc` for line-delimited JSON-RPC transports such as MCP stdio. It dials an in-memory `net.Pipe` and speaks JSON-RPC 2.0 exactly like a real client.
+
+```go
+import (
+    "context"
+    "io"
+    "testing"
+
+    "github.com/nexssp/testkit/rpc"
+)
+
+func TestMCP_Stdio(t *testing.T) {
+    client := rpc.DialJSONRPC(t, func(ctx context.Context, in io.Reader, out io.Writer) error {
+        return mcpServer.Serve(ctx, in, out)
+    })
+
+    resp := client.Call("tools/list", nil, 1)
+
+    var data struct {
+        Tools []struct {
+            Name string `json:"name"`
+        } `json:"tools"`
+    }
+    resp.BindResult(t, &data)
+
+    // Assert with standard Go testing
+    if len(data.Tools) != 1 {
+        t.Fatalf("expected 1 tool, got %d", len(data.Tools))
+    }
+}
+```
+
+### `rpc.Client` API
+
+```go
+client := rpc.DialJSONRPC(t, serveFunc)
+
+// Request / response
+resp := client.Call("tools/list", nil, 1)
+
+// Notification (no response)
+_ = client.Notify("notifications/initialized", nil)
+
+// Raw payload line (e.g. parse-error tests)
+resp = client.CallRaw(`{"jsonrpc":"2.0","id":1,"method":"ping"}`)
+
+// Typed result binding
+resp.BindResult(t, &myStruct)
+
+// JSON-RPC error object
+if resp.Error != nil {
+    t.Fatalf("RPC error: %+v", resp.Error)
 }
 ```
 

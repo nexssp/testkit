@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -76,5 +77,50 @@ func TestSSE_EndpointHelper(t *testing.T) {
 
 	if !strings.Contains(endpoint, "/mcp/message?sessionId=") {
 		t.Fatalf("unexpected endpoint: %s", endpoint)
+	}
+}
+
+func TestSSE_ListenSSEWithRequest_Post(t *testing.T) {
+	t.Parallel()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("POST /rpc/stream", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+			return
+		}
+		if got := r.Header.Get("Accept"); got != "text/event-stream" {
+			http.Error(w, "bad accept", http.StatusBadRequest)
+			return
+		}
+
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "streaming unsupported", http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintf(w, "event: message\ndata: {\"status\":\"ok\"}\n\n")
+		flusher.Flush()
+
+		<-r.Context().Done()
+	})
+
+	suite := testkit.NewWithHandler(t, mux)
+
+	req := httptest.NewRequest(http.MethodPost, "/rpc/stream",
+		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+
+	stream := suite.ListenSSEWithRequest(t, req)
+	defer stream.Close()
+
+	evt := stream.WaitFor(t, "message", 2*time.Second)
+
+	if !strings.Contains(evt.Data, `"status":"ok"`) {
+		t.Fatalf("unexpected SSE data: %q", evt.Data)
 	}
 }

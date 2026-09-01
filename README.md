@@ -331,6 +331,20 @@ endpoint := stream.Endpoint(t, 2*time.Second) // "/mcp/message?sessionId=..."
 msg := stream.WaitForData(t, "result", 2*time.Second)
 ```
 
+For A2A / MCP Streamable HTTP (POST + SSE), use `ListenSSEWithRequest`:
+
+```go
+req := httptest.NewRequest(http.MethodPost, "/endpoint",
+    strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"message/send"}`))
+req.Header.Set("Content-Type", "application/json")
+req.Header.Set("Accept", "text/event-stream")
+
+stream := suite.ListenSSEWithRequest(t, req)
+defer stream.Close()
+
+evt := stream.WaitFor(t, "message", 2*time.Second)
+```
+
 ---
 
 ## 8. Deterministic Scripting & Hook Event Recording

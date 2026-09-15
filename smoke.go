@@ -39,10 +39,7 @@ func RunSmokeTests(t *testing.T, actions []action.AnyAction) {
 			t.Run(meta.Name+"_"+method, func(t *testing.T) {
 				path := pathParamRegex.ReplaceAllString(rawPath, "test-id")
 
-				var payload any = struct{}{}
-				if typed, ok := act.(action.TypedPayload); ok {
-					payload = generateMinimalPayload(typed.ReqPayload())
-				}
+				payload := smokePayload(act)
 
 				req := suite.Request(method, path)
 				if method != http.MethodGet && method != http.MethodDelete && method != http.MethodHead {
@@ -57,6 +54,18 @@ func RunSmokeTests(t *testing.T, actions []action.AnyAction) {
 			})
 		}
 	}
+}
+
+// smokePayload prefers the action's declared Example. Only when the
+// author did not provide one does it guess from the request struct.
+func smokePayload(act action.AnyAction) any {
+	if ex := act.Describe().Example; ex != nil {
+		return ex
+	}
+	if typed, ok := act.(action.TypedPayload); ok {
+		return generateMinimalPayload(typed.ReqPayload())
+	}
+	return struct{}{}
 }
 
 func generateMinimalPayload(t any) map[string]any {

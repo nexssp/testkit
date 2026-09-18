@@ -48,10 +48,7 @@ func (s *Suite) LoadTest(t *testing.T, cfg LoadConfig) LoadResult {
 	start := time.Now()
 
 	for range cfg.Concurrency {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			localDurations := make([]time.Duration, 0, 1024)
 			var localErrs int64
 			var localTotal int64
@@ -97,7 +94,7 @@ func (s *Suite) LoadTest(t *testing.T, cfg LoadConfig) LoadResult {
 					localErrs++
 				}
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

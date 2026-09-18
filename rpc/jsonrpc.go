@@ -19,19 +19,19 @@ type Request struct {
 
 // Response is a JSON-RPC 2.0 response object.
 type Response struct {
-	JSONRPC string    `json:"jsonrpc"`
-	ID      any       `json:"id,omitempty"`
-	Result  any       `json:"result,omitempty"`
-	Error   *RPCError `json:"error,omitempty"`
+	JSONRPC string `json:"jsonrpc"`
+	ID      any    `json:"id,omitempty"`
+	Result  any    `json:"result,omitempty"`
+	Error   *Error `json:"error,omitempty"`
 }
 
-// RPCError represents a JSON-RPC error object.
-type RPCError struct {
+// Error represents a JSON-RPC error object.
+type Error struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 }
 
-func (e *RPCError) Error() string { return e.Message }
+func (e *Error) Error() string { return e.Message }
 
 // Client is a JSON-RPC 2.0 test client connected to an in-memory pipe.
 type Client struct {
@@ -80,7 +80,7 @@ func DialJSONRPC(t testing.TB, serve func(ctx context.Context, in io.Reader, out
 }
 
 // Call sends a JSON-RPC request and waits for the matching response.
-func (c *Client) Call(method string, params any, id any) Response {
+func (c *Client) Call(method string, params, id any) Response {
 	c.t.Helper()
 
 	raw, err := marshalParams(params)

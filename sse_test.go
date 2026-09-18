@@ -110,8 +110,12 @@ func TestSSE_ListenSSEWithRequest_Post(t *testing.T) {
 
 	suite := testkit.NewWithHandler(t, mux)
 
-	req := httptest.NewRequest(http.MethodPost, "/rpc/stream",
-		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`))
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/rpc/stream",
+		strings.NewReader(`{"jsonrpc":"2.0","id":1,"method":"ping"}`),
+	)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
 

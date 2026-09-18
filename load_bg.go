@@ -21,7 +21,11 @@ func (s *Suite) StartBackgroundLoad(cfg LoadConfig) func() {
 
 	var payloadBytes []byte
 	if cfg.Payload != nil {
-		payloadBytes, _ = json.Marshal(cfg.Payload)
+		var err error
+		payloadBytes, err = json.Marshal(cfg.Payload)
+		if err != nil {
+			log.Printf("testkit: StartBackgroundLoad: marshal payload: %v", err)
+		}
 	}
 
 	for range cfg.Concurrency {

@@ -11,7 +11,7 @@ import (
 	"github.com/nexssp/testkit/rpc"
 )
 
-func serveEcho(ctx context.Context, in io.Reader, out io.Writer) error {
+func serveEcho(_ context.Context, in io.Reader, out io.Writer) error {
 	dec := json.NewDecoder(in)
 	enc := json.NewEncoder(out)
 
@@ -61,7 +61,7 @@ func TestDialJSONRPC_Notify(t *testing.T) {
 }
 
 func TestDialJSONRPC_Error(t *testing.T) {
-	server := func(ctx context.Context, in io.Reader, out io.Writer) error {
+	server := func(_ context.Context, in io.Reader, out io.Writer) error {
 		dec := json.NewDecoder(in)
 		enc := json.NewEncoder(out)
 
@@ -73,7 +73,7 @@ func TestDialJSONRPC_Error(t *testing.T) {
 		return enc.Encode(rpc.Response{
 			JSONRPC: "2.0",
 			ID:      req.ID,
-			Error:   &rpc.RPCError{Code: -32601, Message: "method not found"},
+			Error:   &rpc.Error{Code: -32601, Message: "method not found"},
 		})
 	}
 
@@ -86,7 +86,7 @@ func TestDialJSONRPC_Error(t *testing.T) {
 }
 
 func TestDialJSONRPC_CallRaw(t *testing.T) {
-	server := func(ctx context.Context, in io.Reader, out io.Writer) error {
+	server := func(_ context.Context, in io.Reader, out io.Writer) error {
 		br := bufio.NewReader(in)
 		if _, err := br.ReadBytes('\n'); err != nil {
 			return err
@@ -95,7 +95,7 @@ func TestDialJSONRPC_CallRaw(t *testing.T) {
 		enc := json.NewEncoder(out)
 		return enc.Encode(rpc.Response{
 			JSONRPC: "2.0",
-			Error:   &rpc.RPCError{Code: -32700, Message: "Parse error"},
+			Error:   &rpc.Error{Code: -32700, Message: "Parse error"},
 		})
 	}
 

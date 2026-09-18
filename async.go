@@ -2,7 +2,7 @@ package testkit
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"testing"
 	"time"
 )
@@ -82,7 +82,7 @@ func WaitForJSON[T any](
 			return false
 		}
 		if response == nil {
-			lastErr = fmt.Errorf("nil HTTP response")
+			lastErr = errors.New("nil HTTP response")
 			return false
 		}
 		if err := json.Unmarshal(response.body, &value); err != nil {

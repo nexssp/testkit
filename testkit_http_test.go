@@ -149,7 +149,12 @@ func TestHTTP_CookiesAndHeadersInheritance(t *testing.T) {
 		tenant := r.Header.Get(testkit.HeaderTenantID)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"authorized","tenant":"` + tenant + `"}`))
+		if err := json.NewEncoder(w).Encode(map[string]string{
+			"status": "authorized",
+			"tenant": tenant,
+		}); err != nil {
+			t.Errorf("encode response: %v", err)
+		}
 	})
 
 	suite := testkit.NewWithHandler(t, mux)
@@ -176,7 +181,7 @@ func TestHTTP_CookiesAndHeadersInheritance(t *testing.T) {
 func TestHTTP_ErrorResponsesAndStatusExpectations(t *testing.T) {
 	t.Parallel()
 
-	failingAct := action.New("failing.action", func(ctx context.Context, req struct{ Reason string }) (struct{}, error) {
+	failingAct := action.New("failing.action", func(_ context.Context, req struct{ Reason string }) (struct{}, error) {
 		switch req.Reason {
 		case "bad_input":
 			return struct{}{}, xerr.BadRequest("invalid field values")

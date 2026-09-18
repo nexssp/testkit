@@ -1,11 +1,7 @@
-github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
-github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/nexssp/kernel v0.11.2 h1:uTT8dUAhtc15bkA53Ek+ZhfL/uGJ9BH1rw78QwW+LbE=
-github.com/nexssp/kernel v0.11.2/go.mod h1:gLyh+67KWqJsj0YTMijJyfjh7NGN58pqjRmEdFd1VO0=
-github.com/nexssp/transport v0.2.3 h1:X8xtPnHFQVjmBNvPpOEQtLn0fBgPgJHdAQOWzJ5Nes0=
-github.com/nexssp/transport v0.2.3/go.mod h1:N4bCMuZEPw4zVA0xP3M81dmKarDU2q1mclcUUjDAjjw=
-github.com/robfig/cron/v3 v3.0.1 h1:WdRxkvbJztn8LMz/QEvLN5sBU+xKpSqwwUO1Pjr4qDs=
-github.com/robfig/cron/v3 v3.0.1/go.mod h1:eQICP3HwyT7UooqI/z+Ov+PtYAWygg1TEWWzGIFLtro=
+github.com/nexssp/kernel v0.14.0 h1:D1GXYgcSTdmpzhoV/X7D810xT5GiAbB+pk4bPFT2mfg=
+github.com/nexssp/kernel v0.14.0/go.mod h1:gLyh+67KWqJsj0YTMijJyfjh7NGN58pqjRmEdFd1VO0=
+github.com/nexssp/transport v0.3.2 h1:RPx+0axEQAFN7iy8tkhMJ4INqKkMdQppXNYxZ6eNPWc=
+github.com/nexssp/transport v0.3.2/go.mod h1:z5umlEodiMkDYVqCnQ3LL8fLswjJ3KRTtgP1hqjYu88=
 golang.org/x/sync v0.23.0 h1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=
 golang.org/x/sync v0.23.0/go.mod h1:sUUOizhqBxiL6pEWpqNLUiaJn1ShEbZ6BBqskPbjZm0=
 golang.org/x/time v0.16.0 h1:vMb6ptszcQMkcwiRTAuNNU50gom6++Q/6gY2hDM6VDE=

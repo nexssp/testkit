@@ -22,14 +22,12 @@ func Simulate[Req, Res any](
 	startBarrier := make(chan struct{})
 
 	for range concurrency {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			<-startBarrier
 
 			res, err := act.Do(context.Background(), req)
 			assertFn(t, res, err)
-		}()
+		})
 	}
 
 	close(startBarrier)

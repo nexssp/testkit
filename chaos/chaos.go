@@ -43,12 +43,12 @@ func applyChaos(ctx context.Context, cfg Config) error {
 		return nil
 	}
 
-	if cfg.PanicRate > 0 && rand.Float64() < cfg.PanicRate {
+	if cfg.PanicRate > 0 && rand.Float64() < cfg.PanicRate { //nolint:gosec // test-only chaos
 		panic("chaos: simulated panic injection")
 	}
 
 	if cfg.MaxDelay > 0 {
-		delay := time.Duration(rand.Float64() * float64(cfg.MaxDelay))
+		delay := time.Duration(rand.Float64() * float64(cfg.MaxDelay)) //nolint:gosec // test-only chaos
 		timer := time.NewTimer(delay)
 		select {
 		case <-ctx.Done():
@@ -58,7 +58,7 @@ func applyChaos(ctx context.Context, cfg Config) error {
 		}
 	}
 
-	if cfg.ErrorRate > 0 && rand.Float64() < cfg.ErrorRate {
+	if cfg.ErrorRate > 0 && rand.Float64() < cfg.ErrorRate { //nolint:gosec // test-only chaos
 		return xerr.Unavailable("chaos: simulated transient failure")
 	}
 

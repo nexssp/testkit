@@ -20,7 +20,8 @@ func TestWaitForJSONRetriesUntilPredicateMatches(t *testing.T) {
 		return &Response{body: body}, nil
 	}, func(value struct {
 		Ready bool `json:"ready"`
-	}) bool {
+	},
+	) bool {
 		return value.Ready
 	})
 

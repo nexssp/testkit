@@ -81,13 +81,19 @@ func generateMinimalPayload(t any) map[string]any {
 	}
 
 	fields := make(map[string]any)
-	for i := 0; i < rt.NumField(); i++ {
-		f := rt.Field(i)
-		jsonTag := strings.Split(f.Tag.Get("json"), ",")[0]
+	for f := range rt.Fields() {
+		jsonTag, _, _ := strings.Cut(f.Tag.Get("json"), ",")
 		if jsonTag == "" || jsonTag == "-" {
 			jsonTag = strings.ToLower(f.Name)
 		}
 
+		// The remaining reflect.Kind values (structs, slices, maps,
+		// channels, functions, interfaces, complex numbers, unsafe
+		// pointers, arrays) are deliberately omitted: synthesizing a
+		// wrong shape is worse than omitting the field, and a caller
+		// who wants a specific shape should set act.Meta.Example.
+		//
+		//nolint:exhaustive // unsupported kinds are intentionally omitted
 		switch f.Type.Kind() {
 		case reflect.String:
 			if strings.Contains(f.Tag.Get("validate"), "email") {
@@ -101,6 +107,8 @@ func generateMinimalPayload(t any) map[string]any {
 			fields[jsonTag] = 1.0
 		case reflect.Bool:
 			fields[jsonTag] = true
+		default:
+			// See comment above.
 		}
 	}
 	return fields

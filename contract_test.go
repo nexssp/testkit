@@ -16,11 +16,11 @@ type ValidPayload struct {
 func TestContract_ValidActionsPass(t *testing.T) {
 	t.Parallel()
 
-	act1 := action.New("user.create", func(_ context.Context, req ValidPayload) (string, error) {
+	act1 := action.New("user.create", func(_ context.Context, _ ValidPayload) (string, error) {
 		return "ok", nil
 	}).Route(thttp.POST("/users")).Build()
 
-	act2 := action.New("user.get", func(_ context.Context, req ValidPayload) (string, error) {
+	act2 := action.New("user.get", func(_ context.Context, _ ValidPayload) (string, error) {
 		return "ok", nil
 	}).Route(thttp.GET("/users")).Build()
 

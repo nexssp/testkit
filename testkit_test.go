@@ -87,7 +87,12 @@ func TestScriptAndRecorder(t *testing.T) {
 
 	act.AddAnyHook(action.AnyHook{
 		OnRetry: func(ctx context.Context, req any, attempt int, err error, _ *action.Meta) {
-			rec.OnRetry(ctx, req.(int), attempt, err) // <-- use inherited ctx
+			n, ok := req.(int)
+			if !ok {
+				t.Errorf("unexpected request type %T", req)
+				return
+			}
+			rec.OnRetry(ctx, n, attempt, err)
 		},
 	})
 

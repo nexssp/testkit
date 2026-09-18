@@ -1,4 +1,4 @@
-package testkit
+package testkit // internal: needs testCommand to re-exec for subprocess tests
 
 import (
 	"os"
@@ -115,5 +115,9 @@ func TestEventuallyRejectsNilCondition(t *testing.T) {
 
 func testCommand(t *testing.T, testName string) *exec.Cmd {
 	t.Helper()
-	return exec.Command(os.Args[0], "-test.run=^"+testName+"$", "-test.v")
+	// testName is always a string literal from the test file, and
+	// os.Args[0] is the test binary's own path. Neither is
+	// attacker-controlled; gosec cannot see that across the call.
+	//nolint:gosec // G204: testName is a compile-time constant, not user input
+	return exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$", "-test.v")
 }

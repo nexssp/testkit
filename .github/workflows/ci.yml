@@ -7,33 +7,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   test:
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        go-version: ['1.26']
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: ${{ matrix.go-version }}
-          cache: true
-
-      - name: Verify Formatting
-        run: test -z "$(gofmt -l .)"
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v8
-        with:
-          version: v2.13.2
-          args: --timeout=5m
-
-      - name: Run Unit Tests
-        run: go test ./...
-
-      - name: Run Tests with Race Detector
-        run: go test -race ./...
-
-      - name: Run Benchmarks
-        run: go test -run='^$' -bench=. -benchmem ./...
+    uses: nexssp/.github/.github/workflows/go-ci.yml@v1

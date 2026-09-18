@@ -1,3 +1,6 @@
+default_install_hook_types:
+  - pre-commit
+  - pre-push
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
@@ -9,12 +12,12 @@ repos:
 
   - repo: local
     hooks:
-      - id: go-fmt
-        name: go fmt
-        entry: gofmt -w -l
+      - id: golangci-lint-fmt
+        name: golangci-lint fmt
+        entry: golangci-lint fmt
         language: system
-        types: [go]
         pass_filenames: true
+        types: [go]
 
       - id: golangci-lint
         name: golangci-lint
@@ -29,3 +32,19 @@ repos:
         language: system
         pass_filenames: false
         types: [go]
+
+      - id: go-vet
+        name: go vet
+        entry: go vet ./...
+        language: system
+        pass_filenames: false
+        types: [go]
+        stages: [pre-push]
+
+      - id: go-test-race
+        name: go test -race
+        entry: go test -race -count=1 ./...
+        language: system
+        pass_filenames: false
+        types: [go]
+        stages: [pre-push]

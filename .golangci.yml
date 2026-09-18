@@ -1,49 +1,198 @@
 version: "2"
+
 run:
+  go: "1.26"
   tests: true
+  timeout: 5m
+
 linters:
+  default: none
   enable:
+    # === Core error detection ===
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # === Context, HTTP, errors, nil ===
     - bodyclose
     - contextcheck
+    - errorlint
+    - exhaustive
+    - fatcontext
+    - forcetypeassert
+    - nilnil
+    - nilerr
+    - noctx
+    - errname
+
+    # === Security ===
+    - gosec
+    - asciicheck
+    - bidichk
+
+    # === Performance & modern Go ===
     - gocritic
+    - dupl
     - prealloc
+    - perfsprint
+    - modernize
+    - usestdlibvars
+    - usetesting
+    - copyloopvar
+    - intrange
+    - durationcheck
+    - makezero
+
+    # === Code quality & style ===
     - revive
+    - unconvert
+    - unparam
+    - goconst
+    - misspell
+    - nakedret
+    - predeclared
+    - whitespace
+    - gocyclo
+    - wastedassign
+    - nolintlint
+    - musttag
+
+    # === SQL ===
+    - rowserrcheck
+    - sqlclosecheck
+
+    # === Optional: enable if you use these libraries ===
+    # - testifylint
+    # - paralleltest
+    # - tparallel
+    # - testableexamples
+    # - testpackage
+    # - loggercheck
+    # - sloglint
+
   settings:
     gocritic:
       enabled-tags:
         - diagnostic
-        - style
         - performance
+        - style
+        # - opinionated
+        # - experimental
       disabled-checks:
-        - unnamedResult
-        - paramTypeCombine
         - hugeParam
+
     govet:
-      enable-all: true
+      enable:
+        - shadow
+        - nilness
       disable:
         - fieldalignment
+
+    errcheck:
+      check-type-assertions: false
+      check-blank: true
+
     revive:
+      enable-all-rules: false
       rules:
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: error-return
+        - name: error-strings
+        - name: error-naming
         - name: exported
-          disabled: true
+        - name: if-return
+        - name: increment-decrement
+        - name: var-naming
+        - name: var-declaration
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: time-naming
+        - name: unexported-return
+        - name: indent-error-flow
+        - name: errorf
+        - name: empty-block
+        - name: superfluous-else
+        - name: unused-parameter
+        - name: unreachable-code
+        - name: redefines-builtin-id
+
+    gocyclo:
+      min-complexity: 15
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+      ignore-tests: true
+
+    misspell:
+      locale: US
+
+    nakedret:
+      max-func-lines: 30
+
+    nolintlint:
+      allow-unused: false
+      require-explanation: true
+      require-specific: true
+
+    dupl:
+      threshold: 120
+
+    perfsprint:
+      int-conversion: true
+      err-error: true
+      errorf: true
+      sprintf1: true
+      strconcat: true
+
+    # Optional: enable and customize if needed
+    # depguard:
+    #   rules:
+    #     main:
+    #       deny:
+    #         - pkg: "github.com/pkg/errors"
+    #           desc: "Use standard library errors / fmt"
+    #         - pkg: "io/ioutil"
+    #           desc: "Use os / io"
+    #         - pkg: "math/rand$"
+    #           desc: "Use math/rand/v2"
+    #         - pkg: "log$"
+    #           desc: "Prefer log/slog"
+
   exclusions:
-    generated: lax
+    generated: strict
+    warn-unused: true
     presets:
       - comments
       - common-false-positives
       - legacy
       - std-error-handling
     rules:
-      - linters:
-          - errcheck
-          - gocritic
+      - path: _test\.go
+        linters:
+          - dupl
           - prealloc
-          - revive
-        path: _test\.go
+          - nilnil
+          - goconst
+          - gocyclo
+          - errcheck
+          - unparam
     paths:
-      - vendor
+      - examples
+
 formatters:
-  exclusions:
-    generated: lax
-    paths:
-      - vendor
+  enable:
+    - gofumpt
+    - goimports
+  settings:
+    gofumpt:
+      # extra-rules: true   # enable for even stricter formatting
+    goimports:
+      # local-prefixes:
+      #   - github.com/your/org/project

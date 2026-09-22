@@ -1,5 +1,5 @@
-github.com/nexssp/kernel v0.15.0 h1:MwEAvwceRpqfZthdVQQ2kxYRtQBskudGX6ULZiigtus=
-github.com/nexssp/kernel v0.15.0/go.mod h1:gLyh+67KWqJsj0YTMijJyfjh7NGN58pqjRmEdFd1VO0=
+github.com/nexssp/kernel v0.18.0 h1:1txSCQfnMrde5G7RQn3QZZd6thYtqLCNTln1izcpk0E=
+github.com/nexssp/kernel v0.18.0/go.mod h1:gLyh+67KWqJsj0YTMijJyfjh7NGN58pqjRmEdFd1VO0=
 github.com/nexssp/transport v0.3.2 h1:RPx+0axEQAFN7iy8tkhMJ4INqKkMdQppXNYxZ6eNPWc=
 github.com/nexssp/transport v0.3.2/go.mod h1:z5umlEodiMkDYVqCnQ3LL8fLswjJ3KRTtgP1hqjYu88=
 golang.org/x/sync v0.23.0 h1:KameEIfc1IkluZyXWLn39Wd4tURc6GbCiISGiZm2bQk=

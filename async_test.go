@@ -3,6 +3,7 @@ package testkit
 import (
 	"encoding/json"
 	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
@@ -111,4 +112,10 @@ func assertSubprocessFailure(t *testing.T, testName, want, envName string) {
 	if !strings.Contains(string(output), want) {
 		t.Fatalf("failure output = %q, want %q", output, want)
 	}
+}
+
+func testCommand(t *testing.T, testName string) *exec.Cmd {
+	t.Helper()
+	//nolint:gosec // G204: testName is always a compile-time literal at the call site, not user input.
+	return exec.CommandContext(t.Context(), os.Args[0], "-test.run=^"+testName+"$", "-test.v")
 }

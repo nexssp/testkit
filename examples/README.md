@@ -25,4 +25,4 @@ it is a bug in the test.
 | `04_simulate`    | Thundering herd / barrier-based concurrency test    |
 | `05_contracts`   | Structural invariants across every action           |
 | `06_chaos`       | Fault injection middleware                          |
-| `07_golden`      | Golden-file snapshot with `-testkit.update`         |
+| `07_golden`      | Golden-file snapshot (kernel `xtest`, `-xtest.update`) |

@@ -3,7 +3,7 @@
 // Run first time:          go test ./... -run TestGolden -v
 // The test fails, telling you to create the file.
 //
-// Create / rewrite:        go test ./... -run TestGolden -testkit.update
+// Create / rewrite:        go test ./... -run TestGolden -xtest.update
 // Then review the diff in git.
 //
 // Normal run:              go test ./...
@@ -17,7 +17,7 @@ package golden
 import (
 	"testing"
 
-	"github.com/nexssp/testkit"
+	"github.com/nexssp/kernel/xtest"
 )
 
 type APIResponse struct {
@@ -33,5 +33,5 @@ func TestGolden_SnapshotAPIResponse(t *testing.T) {
 		Features:  []string{"sso", "audit", "webhooks"},
 	}
 
-	testkit.GoldenJSON(t, "api_response", got)
+	xtest.GoldenJSON(t, "api_response", got)
 }

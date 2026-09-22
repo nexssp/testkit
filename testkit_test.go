@@ -8,6 +8,7 @@ import (
 
 	"github.com/nexssp/kernel/action"
 	"github.com/nexssp/kernel/xerr"
+	"github.com/nexssp/kernel/xtest/ktest"
 	"github.com/nexssp/testkit"
 	"github.com/nexssp/transport/thttp"
 )
@@ -75,12 +76,12 @@ func TestScriptAndRecorder(t *testing.T) {
 	t.Parallel()
 
 	// Use xerr.Unavailable so the retry engine recognizes it as a transient failure
-	scripted := testkit.Script[int, string](
-		testkit.Failure[string](xerr.Unavailable("transient-error")),
-		testkit.Success("recovered"),
+	scripted := ktest.Script[int, string](
+		ktest.Failure[string](xerr.Unavailable("transient-error")),
+		ktest.Success("recovered"),
 	)
 
-	rec := new(testkit.Recorder[int, string])
+	rec := new(ktest.Recorder[int, string])
 	act := action.New("retry.test", scripted).
 		Retry(2, action.ConstantBackoff(0)).
 		Build()

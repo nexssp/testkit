@@ -15,7 +15,7 @@ import (
 	"testing"
 
 	"github.com/nexssp/kernel/action"
-	"github.com/nexssp/testkit"
+	"github.com/nexssp/kernel/xtest/ktest"
 )
 
 func TestSimulate_ThunderingHerd(t *testing.T) {
@@ -50,7 +50,7 @@ func TestSimulate_ThunderingHerd(t *testing.T) {
 		return n * 2, nil
 	}).Build()
 
-	testkit.Simulate(t, act, 21, workers, func(t testing.TB, res int, err error) {
+	ktest.Simulate(t, act, 21, workers, func(t testing.TB, res int, err error) {
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}

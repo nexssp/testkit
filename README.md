@@ -6,11 +6,27 @@
 
 **Test the real boundary, not a mock of it.**
 
-`nexssp/testkit` is a Go testing toolkit for real HTTP integration tests, black-box E2E tests, SSE streams, action contracts, concurrency, load, chaos, and JSON-RPC/stdio transports.
+`nexssp/testkit` is a Go testing toolkit for real HTTP integration tests, black-box E2E tests, SSE streams, load, chaos, and JSON-RPC/stdio transports.
 
 It uses the standard `testing` package and standard `net/http` interfaces. It does not require a third-party mock framework.
 
-## What it tests
+## Two packages, two scopes
+
+Testing a Nexssp system means testing two different layers, and there are two different packages for that:
+
+| Layer | Package | What it owns |
+| --- | --- | --- |
+| HTTP, SSE, JSON-RPC, load, chaos | `github.com/nexssp/testkit` (this package) | Wire-protocol test harnesses against a live `http.Handler`, a running process, or an in-memory `net.Pipe` |
+| Action primitives | `github.com/nexssp/kernel/xtest`, `.../xtest/ktest` | Polling (`Eventually`), golden files, call tracing, action fakes, scripted responses, hook recording, concurrency barriers, benchmark helpers, context and error assertions |
+
+Rule of thumb:
+
+- If the test touches HTTP, SSE, JSON-RPC, a network socket, or a load generator — it belongs in `testkit`.
+- If the test touches `action.BuiltAction`, `iter.Seq2`, hooks, `xctx`, or `xerr` — it belongs in `kernel/xtest` or `kernel/xtest/ktest`.
+
+There is no overlap. `testkit` does not re-export kernel helpers, and `kernel/xtest` does not touch `net/http`.
+
+## What testkit provides
 
 | Target | Constructor or package | Scope |
 | --- | --- | --- |
@@ -18,12 +34,38 @@ It uses the standard `testing` package and standard `net/http` interfaces. It do
 | Any Go router or handler | `testkit.NewWithHandler` | Router and middleware integration |
 | Running local, LAN, container, staging, or production URL | `testkit.NewE2E` | Black-box HTTP E2E |
 | JSON-RPC or stdio server | `testkit/rpc` | Line-delimited JSON-RPC over an in-memory pipe |
-| Action resilience and concurrency | `Simulate`, `Script`, `Recorder`, `WithChaos` | Deterministic and stress-oriented tests |
+| Action fault injection | `testkit/chaos`, `testkit.WithChaos` | Stochastic latency, errors, and panics |
+| HTTP load | `testkit.LoadTest`, `testkit.StartBackgroundLoad` | In-process stress and profiling |
+
+## What kernel/xtest provides
+
+Use these directly. They are not re-exported here.
+
+| Need | API |
+| --- | --- |
+| Wait for arbitrary state | `xtest.Eventually(t, timeout, cond)` |
+| Custom poll interval | `xtest.EventuallyEvery(t, timeout, interval, cond)` |
+| Error-returning variants | `xtest.EventuallyE`, `xtest.EventuallyEveryE` |
+| Wait for a value | `xtest.WaitForValue[T](t, timeout, want, get)` |
+| Golden-file snapshot | `xtest.GoldenJSON(t, name, got)` with `-xtest.update` |
+| Assert callback order | `ktest.Trace`, `Trace.RequireSequence`, `RequireOrder` |
+| Concurrency barrier | `ktest.Simulate(t, act, req, n, assertFn)` |
+| Structural action contracts | `ktest.AssertContracts(t, actions)` |
+| Scripted action responses | `ktest.Script`, `ktest.Success`, `ktest.Failure` |
+| Record retry / cache / coalesce | `ktest.Recorder[Req, Res]` |
+| Action stubs | `ktest.Fake`, `ktest.Echo`, `ktest.Returns`, `ktest.Fails`, `ktest.Sequence`, `ktest.Flaky` |
+| Single-action run | `ktest.Run(tb, act, ctx, req)` |
+| Action benchmark | `ktest.BenchAction(b, act, req)` |
+| xctx-populated test contexts | `ktest.Ctx`, `ktest.CtxWithAuth`, ... |
+| xerr assertions | `ktest.RequireNoError`, `ktest.RequireErrorKind`, ... |
+| Parallel runner | `xtest.RunParallel(tb, n, fn)` |
+| Goroutine leak check | `xtest.RequireNoGoroutineLeak(tb, base, timeout)` |
 
 ## Installation
 
 ```bash
 go get github.com/nexssp/testkit@latest
+go get github.com/nexssp/kernel@latest
 ```
 
 ## Quick decision guide
@@ -32,29 +74,33 @@ go get github.com/nexssp/testkit@latest
 
 ```go
 // Kernel actions, in memory.
-suite := testkit.New(t, GetUser, CreateOrder )
+suite := testkit.New(t, GetUser, CreateOrder)
 
 // Any standard net/http.Handler.
-suite := testkit.NewWithHandler(t, mux )
+suite := testkit.NewWithHandler(t, mux)
 
 // A running process, container, LAN machine, or staging deployment.
-suite := testkit.NewE2E(t, "http://127.0.0.1:8080" )
+suite := testkit.NewE2E(t, "http://127.0.0.1:8080")
 ```
 
 ### Choose an assertion
 
-| Requirement | API |
-| --- | --- |
-| One synchronous HTTP request | `suite.GET(...).Do().ExpectOK()` |
-| Decode one response | `response.Into(&dst)` |
-| Inspect nested JSON | `response.HasField("data.id", value)` |
-| Wait for arbitrary state | `testkit.Eventually(...)` |
-| Poll an HTTP JSON endpoint | `testkit.WaitForJSON(...)` |
-| Wait for a named SSE event | `stream.WaitFor(...)` |
-| Wait for an SSE substring | `stream.WaitForData(...)` |
-| Match structured SSE criteria | `stream.WaitForSSE(...)` |
-| Probe all action routes | `testkit.RunSmokeTests(...)` |
-| Test JSON-RPC/stdio | `testkit/rpc` |
+| Requirement | API | Package |
+| --- | --- | --- |
+| One synchronous HTTP request | `suite.GET(...).Do().ExpectOK()` | testkit |
+| Decode one response | `response.Into(&dst)` | testkit |
+| Inspect nested JSON | `response.HasField("data.id", value)` | testkit |
+| Poll an HTTP JSON endpoint | `testkit.WaitForJSON(...)` | testkit |
+| Wait for a named SSE event | `stream.WaitFor(...)` | testkit |
+| Wait for an SSE substring | `stream.WaitForData(...)` | testkit |
+| Match structured SSE criteria | `stream.WaitForSSE(...)` | testkit |
+| Probe all action routes over HTTP | `testkit.RunSmokeTests(...)` | testkit |
+| Test JSON-RPC/stdio | `testkit/rpc` | testkit |
+| Wait for a non-HTTP condition | `xtest.Eventually(...)` | kernel/xtest |
+| Snapshot a value as golden JSON | `xtest.GoldenJSON(...)` | kernel/xtest |
+| Assert callback order | `ktest.Trace` | kernel/xtest/ktest |
+| Force N goroutines through a barrier | `ktest.Simulate(...)` | kernel/xtest/ktest |
+| Check structural action invariants | `ktest.AssertContracts(...)` | kernel/xtest/ktest |
 
 ## Cheatsheet
 
@@ -87,11 +133,6 @@ status = testkit.WaitForJSON[StatusResponse](
     },
 )
 
-// Generic eventual condition.
-testkit.Eventually(t, 10*time.Second, 100*time.Millisecond, func() bool {
-    return service.IsReady()
-})
-
 // SSE event matching.
 stream := suite.ListenSSE("/api/events")
 t.Cleanup(stream.Close)
@@ -99,6 +140,11 @@ event := stream.WaitForSSE(t, 20*time.Second, func(event testkit.SSEEvent) bool 
     return event.Event == "docker" && strings.Contains(event.Data, "completed")
 })
 _ = event
+
+// Non-HTTP eventual condition (kernel xtest).
+xtest.Eventually(t, 10*time.Second, func() bool {
+    return service.IsReady()
+})
 ```
 
 ## 1. Testing kernel actions
@@ -115,7 +161,7 @@ import (
     "github.com/nexssp/kernel/action"
     "github.com/nexssp/testkit"
     "github.com/nexssp/transport/thttp"
- )
+)
 
 type UserDTO struct {
     ID    string `json:"id" path:"id"`
@@ -125,7 +171,7 @@ type UserDTO struct {
 func TestGetUser(t *testing.T) {
     getUser := action.New("user.get", func(_ context.Context, req UserDTO) (UserDTO, error) {
         return UserDTO{ID: req.ID, Email: "admin@nexss.com"}, nil
-    }).Route(thttp.GET("/v1/users/{id}" )).Build()
+    }).Route(thttp.GET("/v1/users/{id}")).Build()
 
     suite := testkit.New(t, getUser)
     suite.GET("/v1/users/usr-42").
@@ -141,9 +187,9 @@ func TestGetUser(t *testing.T) {
 No kernel dependency is required. `NewWithHandler` works with the standard library and routers such as Chi, Gin, and Echo.
 
 ```go
-func TestHealth(t *testing.T ) {
-    mux := http.NewServeMux( )
-    mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request ) {
+func TestHealth(t *testing.T) {
+    mux := http.NewServeMux()
+    mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
         w.Header().Set("Content-Type", "application/json")
         _, _ = w.Write([]byte(`{"status":"healthy"}`))
     })
@@ -159,7 +205,7 @@ func TestHealth(t *testing.T ) {
 
 ```go
 func TestStagingStatus(t *testing.T) {
-    suite := testkit.NewE2E(t, "https://staging-api.example.com" )
+    suite := testkit.NewE2E(t, "https://staging-api.example.com")
 
     suite.GET("/v1/system/status").
         WithHeader("X-Api-Key", os.Getenv("STAGING_API_KEY")).
@@ -180,7 +226,7 @@ Use E2E tests for the real process, configuration, persistence, Docker, network,
 ## 4. HTTP requests and assertions
 
 ```go
-suite.POST("/v1/invoices" ).
+suite.POST("/v1/invoices").
     WithQuery("draft", "true").
     WithQueries(map[string]string{"currency": "USD"}).
     WithHeader("X-Trace-ID", "trace-123").
@@ -204,7 +250,7 @@ suite.POST("/v1/documents/upload").
     ExpectCreated()
 ```
 
-Available response operations include:
+Available response operations:
 
 ```go
 ExpectStatus(code)
@@ -233,21 +279,9 @@ response, err := suite.GET("/healthz").DoE()
 
 ## 5. Asynchronous HTTP and SSE assertions
 
-### `Eventually`
-
-Use `Eventually` for a condition that is not specifically HTTP or SSE. It evaluates immediately, then waits between attempts. It starts no goroutines.
-
-```go
-testkit.Eventually(t, 10*time.Second, 100*time.Millisecond, func() bool {
-    return engine.State() == "completed"
-})
-```
-
-Use polling only for genuinely asynchronous behavior. Do not use it to hide a deterministic failure.
-
 ### `WaitForJSON`
 
-Use `WaitForJSON` when an HTTP endpoint exposes eventually consistent state. The request factory must build a fresh request for each attempt.
+`WaitForJSON` polls an HTTP endpoint that exposes eventually consistent state. The request factory must build a fresh request for each attempt. Request and JSON-decoding errors are retried; if the timeout expires, the last observed error is included in the failure message.
 
 ```go
 type StatusResponse struct {
@@ -267,7 +301,7 @@ status := testkit.WaitForJSON[StatusResponse](
 )
 ```
 
-Request and JSON-decoding errors are retried. If the timeout expires, the last observed error is included in the failure when one exists.
+For non-HTTP polling, use `xtest.Eventually` or `xtest.EventuallyEvery` from `github.com/nexssp/kernel/xtest`. Do not use polling to hide a deterministic failure.
 
 ### SSE
 
@@ -315,63 +349,7 @@ func TestAllRoutes(t *testing.T) {
 
 A `2xx`, `4xx`, or other intentional non-`5xx` response passes. This verifies that endpoints do not panic or fail through an unhandled server error; it does not replace behavioral endpoint tests.
 
-## 7. Architectural contracts
-
-`AssertContracts` checks system-wide action invariants such as duplicate names, missing bindings, and malformed API payload types.
-
-```go
-testkit.AssertContracts(t, allActions)
-```
-
-## 8. Deterministic scripting and hook recording
-
-`Script` supplies deterministic sequential results for retry, circuit-breaker, and fallback tests.
-
-```go
-scripted := testkit.Script[int, string](
-    testkit.Failure[string](xerr.Unavailable("temporary failure")),
-    testkit.Failure[string](xerr.Unavailable("temporary failure")),
-    testkit.Success("recovered"),
-)
-
-act := action.New("order.settle", scripted).
-    Retry(3, action.ConstantBackoff(time.Millisecond)).
-    Build()
-```
-
-`Recorder` captures retry, cache, coalescing, and deduplication events.
-
-```go
-rec := new(testkit.Recorder[int, string])
-```
-
-Attach it through the action hook interfaces and assert on the recorded events after execution.
-
-## 9. Concurrency and thundering-herd tests
-
-`Simulate` starts concurrent workers behind a synchronized barrier.
-
-```go
-var databaseCalls atomic.Int32
-
-fetchPrice := action.New("price.fetch", func(_ context.Context, sku string) (float64, error) {
-    databaseCalls.Add(1)
-    time.Sleep(20 * time.Millisecond)
-    return 199.99, nil
-}).Dedup(func(sku string) string { return sku }).Build()
-
-testkit.Simulate(t, fetchPrice, "SKU-1", 50, func(t testing.TB, price float64, err error) {
-    if err != nil || price != 199.99 {
-        t.Errorf("unexpected result: %v, err=%v", price, err)
-    }
-})
-
-if got := databaseCalls.Load(); got != 1 {
-    t.Fatalf("expected one underlying call, got %d", got)
-}
-```
-
-## 10. Load and latency testing
+## 7. Load and latency testing
 
 `LoadTest` runs in-process traffic and reports request count, RPS, error rate, and latency percentiles.
 
@@ -381,7 +359,7 @@ result := suite.LoadTest(t, testkit.LoadConfig{
     Duration:    3 * time.Second,
     Method:      http.MethodGet,
     Path:        "/v1/orders/ord-1",
-} )
+})
 
 t.Logf("requests=%d rps=%.2f errors=%.2f%% p50=%v p95=%v p99=%v",
     result.TotalRequests,
@@ -400,13 +378,13 @@ stop := suite.StartBackgroundLoad(testkit.LoadConfig{
     Concurrency: 8,
     Method:      http.MethodGet,
     Path:        "/v1/orders/ord-1",
-} )
+})
 defer stop()
 ```
 
 Treat load-test thresholds as environment-specific measurements, not universal guarantees.
 
-## 11. Chaos and fault injection
+## 8. Chaos and fault injection
 
 `testkit/chaos` injects controlled delay, errors, and panics into action execution.
 
@@ -426,7 +404,7 @@ suite.POST("/v1/orders", map[string]any{"sku": "A"}).
 
 Use chaos tests to verify retry, timeout, circuit-breaker, panic-recovery, and error-boundary behavior. Keep randomness bounded and use assertions that tolerate the configured fault rate.
 
-## 12. JSON-RPC and stdio transports
+## 9. JSON-RPC and stdio transports
 
 Use `testkit/rpc` for line-delimited JSON-RPC transports such as MCP stdio. It uses an in-memory `net.Pipe` and a real JSON-RPC client.
 
@@ -466,11 +444,8 @@ response.Error
 Keep tests in layers:
 
 1. **Unit tests** for pure functions and deterministic action behavior.
-
 1. **In-process integration tests** with `New` or `NewWithHandler`.
-
 1. **Black-box E2E tests** with `NewE2E` against a real process or deployment.
-
 1. **Load and chaos tests** as explicit, separately named test groups.
 
 Use build tags or environment gates for tests requiring Docker, external providers, a LAN service, or a running binary:

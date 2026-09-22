@@ -14,11 +14,11 @@ import (
 	"testing"
 
 	"github.com/nexssp/kernel/action"
-	"github.com/nexssp/testkit"
+	"github.com/nexssp/kernel/xtest/ktest"
 )
 
 func TestTrace_ProvesCallOrder(t *testing.T) {
-	trace := testkit.NewTrace()
+	trace := ktest.NewTrace()
 
 	fetch := action.New("fetch", func(_ context.Context, in string) (string, error) {
 		return "raw:" + in, nil
@@ -38,7 +38,7 @@ func TestTrace_ProvesCallOrder(t *testing.T) {
 	r2, _ := transform.Do(ctx, r1)
 	_, _ = store.Do(ctx, r2)
 
-	trace.AssertSequence(t, "fetch", "transform", "store")
-	trace.AssertOrder(t, "fetch", "store")
-	trace.AssertAllSucceeded(t)
+	trace.RequireSequence(t, "fetch", "transform", "store")
+	trace.RequireOrder(t, "fetch", "store")
+	trace.RequireAllSucceeded(t)
 }

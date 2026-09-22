@@ -3,7 +3,7 @@ module github.com/nexssp/testkit
 go 1.26.0
 
 require (
-	github.com/nexssp/kernel v0.14.0
+	github.com/nexssp/kernel v0.15.0
 	github.com/nexssp/transport v0.3.2
 )
 

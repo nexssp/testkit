@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/nexssp/kernel/action"
-	"github.com/nexssp/testkit"
+	"github.com/nexssp/kernel/xtest/ktest"
 	"github.com/nexssp/transport/thttp"
 )
 
@@ -33,7 +33,7 @@ func TestLibrary_MeetsInvariants(t *testing.T) {
 		Route(thttp.GET("/api/v1/users/{id}")).
 		Build()
 
-	testkit.AssertContracts(t, []action.AnyAction{createUser, getUser})
+	ktest.AssertContracts(t, []action.AnyAction{createUser, getUser})
 }
 
 func TestLibrary_DetectsOrphanedAction(t *testing.T) {

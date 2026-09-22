@@ -12,15 +12,16 @@
 //     ExpectArrayLen.
 //   - chaos_bridge.go    — WithChaos, the only bridge from this package
 //     into testkit/chaos.
-//   - async.go           — Eventually, WaitForJSON.
-//   - bench.go           — BenchAction, BenchHTTP.
-//   - concurrency.go     — Simulate.
-//   - contract.go        — AssertContracts.
+//   - async.go           — WaitForJSON.
+//   - bench.go           — BenchHTTP.
 //   - load.go            — Suite.LoadTest.
 //   - load_bg.go         — Suite.StartBackgroundLoad.
 //   - sse.go, sse_wait.go — Server-Sent Events capture and waits.
 //   - smoke.go           — RunSmokeTests.
-//   - script.go          — Recorder, Script, MustExecute, MustError.
+//
+// Generic helpers (Eventually, GoldenJSON, Trace, Fake, Script, Recorder,
+// Simulate, AssertContracts, BenchAction, xctx test contexts, xerr
+// assertions) live in github.com/nexssp/kernel/xtest.
 //
 // Subpackages (imported on demand only):
 //

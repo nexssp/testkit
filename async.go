@@ -5,56 +5,33 @@ import (
 	"errors"
 	"testing"
 	"time"
+
+	"github.com/nexssp/kernel/xtest"
 )
 
-const defaultEventuallyInterval = 10 * time.Millisecond
+// errNotReady is returned to EventuallyEveryE when a poll produced a
+// decodable body that did not yet satisfy the caller's ready predicate.
+// It exists purely so the retry loop has something non-nil to observe;
+// the message is what a caller sees if the test times out.
+var errNotReady = errors.New("testkit: response decoded but not ready")
 
-// Eventually repeatedly evaluates condition until it returns true or timeout
-// expires. The condition is evaluated immediately before waiting for the first
-// interval. It runs synchronously on the caller's goroutine and Eventually
-// starts no goroutines.
-func Eventually(t testing.TB, timeout, interval time.Duration, condition func() bool) {
-	t.Helper()
-
-	if condition == nil {
-		t.Fatal("testkit.Eventually: nil condition")
-	}
-
-	if condition() {
-		return
-	}
-
-	if timeout <= 0 {
-		t.Fatalf("testkit.Eventually: condition was false (timeout=%s)", timeout)
-		return
-	}
-
-	interval = normalizePollInterval(timeout, interval)
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if condition() {
-				return
-			}
-		case <-timer.C:
-			t.Fatalf("testkit.Eventually: condition was false after %s", timeout)
-			return
-		}
-	}
-}
-
-// WaitForJSON repeats request until it returns a decodable JSON value accepted
-// by ready, or timeout expires. request must build a fresh request on every
-// call. Transient request and JSON-decoding errors are retried; the last error
-// is included in the timeout failure when one is available.
+// WaitForJSON polls request until the response body decodes as T and
+// satisfies ready, or until timeout elapses. It returns the last
+// successfully-decoded value.
 //
-// This is intended for eventually consistent HTTP APIs. For ordinary one-shot
-// assertions, use suite.GET(...).Do().Into(...) instead.
+// All polling and timeout semantics are delegated to
+// kernel/xtest.EventuallyEveryE, so HTTP polling behaves exactly like
+// every other Eventually assertion in the kernel. This function adds
+// only the decode-then-check step.
+//
+//   - nil ready accepts any decodable body.
+//   - timeout <= 0 performs a single synchronous attempt (matching
+//     EventuallyEveryE's contract).
+//   - a non-positive interval is normalized by the kernel poll loop.
+//
+// On timeout the test is failed via t, and the last observed error
+// (transport error, JSON error, or errNotReady) is included in the
+// failure message.
 func WaitForJSON[T any](
 	t testing.TB,
 	timeout, interval time.Duration,
@@ -66,74 +43,32 @@ func WaitForJSON[T any](
 	if request == nil {
 		t.Fatal("testkit.WaitForJSON: nil request")
 	}
-	if ready == nil {
-		t.Fatal("testkit.WaitForJSON: nil ready predicate")
-	}
 
-	var (
-		lastErr error
-		value   T
-	)
+	var last T
 
-	try := func() bool {
-		response, err := request()
+	err := xtest.EventuallyEveryE(t, timeout, interval, func() error {
+		resp, err := request()
 		if err != nil {
-			lastErr = err
-			return false
+			return err
 		}
-		if response == nil {
-			lastErr = errors.New("nil HTTP response")
-			return false
+		if resp == nil {
+			return errors.New("testkit: request returned (nil, nil)")
 		}
-		if err := json.Unmarshal(response.body, &value); err != nil {
-			lastErr = err
-			return false
+
+		var got T
+		if err := json.Unmarshal(resp.Body(), &got); err != nil {
+			return err
 		}
-		return ready(value)
-	}
-
-	if try() {
-		return value
-	}
-	if timeout <= 0 {
-		failWaitForJSON(t, timeout, lastErr)
-		return value
-	}
-
-	interval = normalizePollInterval(timeout, interval)
-	timer := time.NewTimer(timeout)
-	defer timer.Stop()
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-ticker.C:
-			if try() {
-				return value
-			}
-		case <-timer.C:
-			failWaitForJSON(t, timeout, lastErr)
-			return value
+		if ready != nil && !ready(got) {
+			return errNotReady
 		}
-	}
-}
 
-func failWaitForJSON(t testing.TB, timeout time.Duration, lastErr error) {
-	t.Helper()
-	if lastErr != nil {
-		t.Fatalf("testkit.WaitForJSON: condition was not satisfied after %s; last error: %v", timeout, lastErr)
-		return
+		last = got
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("testkit.WaitForJSON: %v", err)
 	}
-	t.Fatalf("testkit.WaitForJSON: condition was not satisfied after %s", timeout)
-}
 
-func normalizePollInterval(timeout, interval time.Duration) time.Duration {
-	if interval <= 0 {
-		interval = defaultEventuallyInterval
-	}
-	if interval > timeout {
-		interval = timeout
-	}
-	return interval
+	return last
 }

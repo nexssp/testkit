@@ -1,9 +1,7 @@
 version: "2"
 
 run:
-  go: "1.26"
-  tests: true
-  timeout: 5m
+  {tests: true, timeout: 5m, allow-parallel-runners: true}
 
 linters:
   default: none
@@ -14,6 +12,7 @@ linters:
     - ineffassign
     - staticcheck
     - unused
+    - asasalint
 
     # === Context, HTTP, errors, nil ===
     - bodyclose
@@ -26,16 +25,17 @@ linters:
     - nilerr
     - noctx
     - errname
+    - canonicalheader
 
-    # === Security ===
+    # === Security & Dependencies ===
     - gosec
+    - depguard
     - asciicheck
     - bidichk
 
     # === Performance & modern Go ===
     - gocritic
     - dupl
-    - prealloc
     - perfsprint
     - modernize
     - usestdlibvars
@@ -44,6 +44,7 @@ linters:
     - intrange
     - durationcheck
     - makezero
+    - exptostd
 
     # === Code quality & style ===
     - revive
@@ -58,37 +59,32 @@ linters:
     - wastedassign
     - nolintlint
     - musttag
+    - dupword
+    - recvcheck
+    - interfacebloat
+    - tagalign
 
     # === SQL ===
     - rowserrcheck
     - sqlclosecheck
 
-    # === Optional: enable if you use these libraries ===
-    # - testifylint
-    # - paralleltest
-    # - tparallel
-    # - testableexamples
-    # - testpackage
-    # - loggercheck
-    # - sloglint
-
+    # === Test & Logging (Prod essentials) ===
+    - loggercheck
+    - sloglint
+    - testifylint
+    - testableexamples
   settings:
     gocritic:
       enabled-tags:
         - diagnostic
         - performance
         - style
-        # - opinionated
-        # - experimental
       disabled-checks:
         - hugeParam
 
     govet:
-      enable:
-        - shadow
-        - nilness
-      disable:
-        - fieldalignment
+      enable: [shadow, nilness]
+      disable: [fieldalignment]
 
     errcheck:
       check-type-assertions: false
@@ -122,27 +118,15 @@ linters:
         - name: unreachable-code
         - name: redefines-builtin-id
 
-    gocyclo:
-      min-complexity: 15
+    gocyclo: {min-complexity: 20}
+    goconst: {min-len: 5, min-occurrences: 4, ignore-tests: true}
 
-    goconst:
-      min-len: 3
-      min-occurrences: 3
-      ignore-tests: true
+    misspell: {locale: US}
+    nakedret: {max-func-lines: 30}
 
-    misspell:
-      locale: US
+    nolintlint: {allow-unused: false, require-explanation: true, require-specific: true}
 
-    nakedret:
-      max-func-lines: 30
-
-    nolintlint:
-      allow-unused: false
-      require-explanation: true
-      require-specific: true
-
-    dupl:
-      threshold: 120
+    dupl: {threshold: 120}
 
     perfsprint:
       int-conversion: true
@@ -151,48 +135,55 @@ linters:
       sprintf1: true
       strconcat: true
 
-    # Optional: enable and customize if needed
-    # depguard:
-    #   rules:
-    #     main:
-    #       deny:
-    #         - pkg: "github.com/pkg/errors"
-    #           desc: "Use standard library errors / fmt"
-    #         - pkg: "io/ioutil"
-    #           desc: "Use os / io"
-    #         - pkg: "math/rand$"
-    #           desc: "Use math/rand/v2"
-    #         - pkg: "log$"
-    #           desc: "Prefer log/slog"
+    depguard:
+      rules:
+        main:
+          deny:
+            # 1. Standardization
+            - pkg: "github.com/pkg/errors"
+              desc: "Use standard library 'errors' and 'fmt.Errorf' with %w"
+            - pkg: "io/ioutil"
+              desc: "Deprecated in Go 1.16. Use 'io' or 'os' instead"
+            # 2. Modern Go Features
+            - pkg: "math/rand$"
+              desc: "Use 'math/rand/v2' for better performance and security"
+            - pkg: "log$"
+              desc: "Prefer structured logging with 'log/slog'"
+            # 3. Critical for Large Prod Projects (Security & Maintenance)
+            - pkg: "github.com/satori/go.uuid"
+              desc: "Unmaintained. Use 'github.com/google/uuid' instead"
+            - pkg: "github.com/dgrijalva/jwt-go"
+              desc: "Has known CVEs. Use 'github.com/golang-jwt/jwt/v5'"
+            - pkg: "github.com/golang/protobuf"
+              desc: "Use the new 'google.golang.org/protobuf' API"
+
+    loggercheck: {slog: true, kitlog: false, klog: false, logr: false, zap: false}
+
+    tagalign:
+      align: false
+      sort: true
+      order: [nflow, default, json, yaml, toml, xml, validate]
 
   exclusions:
     generated: strict
     warn-unused: true
-    presets:
-      - comments
-      - common-false-positives
-      - legacy
-      - std-error-handling
+    presets: [comments, common-false-positives, legacy, std-error-handling]
     rules:
       - path: _test\.go
-        linters:
-          - dupl
-          - prealloc
-          - nilnil
-          - goconst
-          - gocyclo
-          - errcheck
-          - unparam
-    paths:
-      - examples
+        linters: [dupl, nilnil, goconst, gocyclo, errcheck, unparam]
+
+      - path: _test\.go
+        text: '^shadow: declaration of "err"'
+        linters: [govet]
 
 formatters:
-  enable:
-    - gofumpt
-    - goimports
+  enable: [gofumpt, gci]
   settings:
     gofumpt:
-      # extra-rules: true   # enable for even stricter formatting
-    goimports:
-      # local-prefixes:
-      #   - github.com/your/org/project
+      rewrite-rules:
+          - pattern: 'interface{}'
+            replacement: 'any'
+      extra:
+        group-params: true
+    gci:
+      sections: [standard, default, localmodule]

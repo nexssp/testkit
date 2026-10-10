@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/nexssp/kernel/action"
-	"github.com/nexssp/testkit"
 	"github.com/nexssp/transport/thttp"
+
+	"github.com/nexssp/testkit"
 )
 
 type ProductReq struct {

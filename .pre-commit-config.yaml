@@ -12,39 +12,16 @@ repos:
 
   - repo: local
     hooks:
-      - id: golangci-lint-fmt
-        name: golangci-lint fmt
-        entry: golangci-lint fmt
-        language: system
-        pass_filenames: true
-        types: [go]
-
-      - id: golangci-lint
-        name: golangci-lint
-        entry: golangci-lint run ./...
+      - id: task-pre-commit
+        name: task pre-commit
+        entry: task pre-commit
         language: system
         pass_filenames: false
-        types: [go]
+        stages: [pre-commit]
 
-      - id: go-test
-        name: go test
-        entry: go test ./...
+      - id: task-pre-push
+        name: task pre-push
+        entry: task pre-push
         language: system
         pass_filenames: false
-        types: [go]
-
-      - id: go-vet
-        name: go vet
-        entry: go vet ./...
-        language: system
-        pass_filenames: false
-        types: [go]
-        stages: [pre-push]
-
-      - id: go-test-race
-        name: go test -race
-        entry: go test -race -count=1 ./...
-        language: system
-        pass_filenames: false
-        types: [go]
         stages: [pre-push]

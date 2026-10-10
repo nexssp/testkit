@@ -34,13 +34,13 @@ func TestFluentHTTPSuite(t *testing.T) {
 
 	suite := testkit.NewWithHandler(t, mux)
 
-	suite.POST("/api/v1/users", map[string]string{"name": "Ada"}).
+	suite.POST("/api/v1/users", map[string]string{"name": "Maksymilian"}).
 		WithTenant("acme").
 		Do().
 		ExpectCreated().
 		ExpectHeader("Content-Type", "application/json").
 		HasField("id", "usr_42").
-		HasField("name", "Ada").
+		HasField("name", "Maksymilian").
 		HasField("tenant", "acme").
 		HasField("created", true)
 }

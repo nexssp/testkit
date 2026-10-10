@@ -1,4 +1,4 @@
-name: CI
+name: Go CI
 
 on:
   push:
@@ -7,10 +7,56 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
-  test:
-    uses: nexssp/.github/.github/workflows/go-ci.yml@v1
+  verify:
+    name: build · lint · test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup Go
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Setup Task
+        uses: arduino/setup-task@v2
+        with:
+          version: 3.x
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Fast binary install (~2s), isolates linter dependencies from go.mod
+      - name: Install golangci-lint
+        uses: golangci/golangci-lint-action@v9.3.0
+        with:
+          version: v2.14.0
+          install-only: true
+
+      - name: Verify go.mod and go.sum are tidy
+        run: |
+          task tidy
+          if [ -n "$(git status --porcelain -- go.mod go.sum)" ]; then
+            echo "::error::go.mod or go.sum is not tidy. Run 'task tidy' locally and commit the result."
+            git status --porcelain -- go.mod go.sum
+            git diff -- go.mod go.sum
+            exit 1
+          fi
+
+      - name: Tools
+        run: task tools
+
+      - name: Build
+        run: task build
+
+      - name: Run CI gate
+        run: task ci
+
+      - name: Benchmark smoke check
+        run: task bench
+
+      - name: Run examples
+        run: task examples

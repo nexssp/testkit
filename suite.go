@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	HeaderTenantID = "X-Tenant-ID"
+	HeaderTenantID = "X-Tenant-Id"
 )
 
 // Suite wraps an in-memory or live HTTP server with fluent test assertions.

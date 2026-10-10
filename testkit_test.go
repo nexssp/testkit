@@ -9,8 +9,9 @@ import (
 	"github.com/nexssp/kernel/action"
 	"github.com/nexssp/kernel/xerr"
 	"github.com/nexssp/kernel/xtest/ktest"
-	"github.com/nexssp/testkit"
 	"github.com/nexssp/transport/thttp"
+
+	"github.com/nexssp/testkit"
 )
 
 type UserDTO struct {

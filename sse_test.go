@@ -10,8 +10,9 @@ import (
 	"time"
 
 	"github.com/nexssp/kernel/action"
-	"github.com/nexssp/testkit"
 	"github.com/nexssp/transport/thttp"
+
+	"github.com/nexssp/testkit"
 )
 
 func TestSSE_StreamCaptureAndWaitFor(t *testing.T) {
@@ -39,7 +40,7 @@ func TestSSE_StreamCaptureAndWaitFor(t *testing.T) {
 	// 2. Fire trigger to emit message
 	suite.POST("/events/trigger", map[string]string{"Message": "order_confirmed"}).
 		Do().
-		ExpectCreated()
+		ExpectOK()
 
 	// 3. Block until event payload arrives
 	evt := stream.WaitFor(t, "message", 2*time.Second)

@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"sync/atomic"
 )
@@ -24,7 +24,7 @@ func (s *Suite) StartBackgroundLoad(cfg LoadConfig) func() {
 		var err error
 		payloadBytes, err = json.Marshal(cfg.Payload)
 		if err != nil {
-			log.Printf("testkit: StartBackgroundLoad: marshal payload: %v", err)
+			slog.Error("testkit: StartBackgroundLoad: marshal payload", "error", err)
 		}
 	}
 
@@ -75,7 +75,11 @@ func (s *Suite) StartBackgroundLoad(cfg LoadConfig) func() {
 
 	return func() {
 		cancel()
-		log.Printf("🛑 Background Load Stopped: [%s] %s | Total: %d | Errors: %d\n",
-			cfg.Method, cfg.Path, reqs.Load(), errs.Load())
+		slog.Info("🛑 Background Load Stopped",
+			"method", cfg.Method,
+			"path", cfg.Path,
+			"total", reqs.Load(),
+			"errors", errs.Load(),
+		)
 	}
 }

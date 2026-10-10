@@ -1,9 +1,9 @@
 module github.com/nexssp/testkit
 
-go 1.26.0
+go 1.26.9
 
 require (
-	github.com/nexssp/kernel v0.20.0
+	github.com/nexssp/kernel v0.30.0
 	github.com/nexssp/transport v0.3.2
 )
 

@@ -16,6 +16,8 @@ tasks:
   tidy:      { desc: "go mod tidy",                          cmds: [go mod tidy] }
   clean:     { desc: "rm -rf bin coverage.out",              cmds: [rm -rf bin coverage.out] }
 
+  examples:     { desc: "go build ./examples/...",                       cmds: [go build ./examples/...] }
+
   test:              { desc: "go tool gotestsum -- -short ./...",         cmds: [go tool gotestsum -- -short ./...] }
   test:nocache:      { desc: "go tool gotestsum -- -count=1 ./...",        cmds: [go tool gotestsum -- -count=1 ./...] }
   test:race:         { desc: "go tool gotestsum -- -race -short ./...",   cmds: [go tool gotestsum -- -race -short ./...] }

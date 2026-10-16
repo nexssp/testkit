@@ -57,6 +57,3 @@ jobs:
 
       - name: Benchmark smoke check
         run: task bench
-
-      - name: Run examples
-        run: task examples

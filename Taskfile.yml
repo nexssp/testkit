@@ -1,36 +1,37 @@
 # Nexss Ecosystem
 # Copyright 2018-Present Marcin Polak and Contributors
 # SPDX-License-Identifier: Apache-2.0
+# Install Task: go install github.com/go-task/task/v3/cmd/task@latest
 version: '3'
 
 vars:
   BASE:
     sh: git merge-base HEAD origin/main 2>/dev/null || echo HEAD
   CENTRAL_REF: 'main'
+  PKG: '{{.CLI_ARGS | default "./..."}}'
+  GOTEST: '{{.GOTEST | default "go test"}}' # gotestsum --
 
 tasks:
   default: { cmds: [task --list --sort none], silent: true }
 
-  build:     { desc: "go build ./...",                       cmds: [go build ./...] }
-  build:bin: { desc: "go build -trimpath -o bin/ ./cmd/...", cmds: [go build -trimpath -o bin/ ./cmd/...] }
-  tidy:      { desc: "go mod tidy",                          cmds: [go mod tidy] }
-  clean:     { desc: "rm -rf bin coverage.out",              cmds: [rm -rf bin coverage.out] }
+  build:     { desc: "go build [./...]",                              cmds: ['go build {{.PKG}}'] }
+  build:bin: { desc: "go build -trimpath -o bin/ ./cmd/...",        cmds: [go build -trimpath -o bin/ ./cmd/...] }
+  tidy:      { desc: "go mod tidy",                                 cmds: [go mod tidy] }
+  clean:     { desc: "rm -rf bin coverage.out",                     cmds: [rm -rf bin coverage.out] }
 
-  examples:     { desc: "go build ./examples/...",                       cmds: [go build ./examples/...] }
-
-  test:              { desc: "go tool gotestsum -- -short ./...",         cmds: [go tool gotestsum -- -short ./...] }
-  test:nocache:      { desc: "go tool gotestsum -- -count=1 ./...",        cmds: [go tool gotestsum -- -count=1 ./...] }
-  test:race:         { desc: "go tool gotestsum -- -race -short ./...",   cmds: [go tool gotestsum -- -race -short ./...] }
-  test:race:nocache: { desc: "go tool gotestsum -- -race -count=1 ./...", cmds: [go tool gotestsum -- -race -count=1 ./...] }
-  test:cover:        { desc: "go test -coverprofile=coverage.out ./...",  cmds: [go test -coverprofile=coverage.out -short ./..., go tool cover -func=coverage.out] }
-  bench:             { desc: "go test -run='^$' -bench=. -benchmem ./...",cmds: [go test -run='^$' -bench=. -benchmem ./...] }
+  test:              { desc: "{{.GOTEST}} -short [./...]",          cmds: ['{{.GOTEST}} -short {{.PKG}}'] }
+  test:nocache:      { desc: "{{.GOTEST}} -count=1 [./...]",        cmds: ['{{.GOTEST}} -count=1 {{.PKG}}'] }
+  test:race:         { desc: "{{.GOTEST}} -race -short [./...]",    cmds: ['{{.GOTEST}} -race -short {{.PKG}}'] }
+  test:race:nocache: { desc: "{{.GOTEST}} -race -count=1 [./...]",  cmds: ['{{.GOTEST}} -race -count=1 {{.PKG}}'] }
+  test:cover:        { desc: "{{.GOTEST}} -coverprofile=coverage.out [./...]", cmds: ['go test -coverprofile=coverage.out -short {{.PKG}}', go tool cover -func=coverage.out] }
+  bench:             { desc: "{{.GOTEST}} -run='^$' -bench=. -benchmem [./...]", cmds: ["{{.GOTEST}} -run='^$' -bench=. -benchmem {{.PKG}}"] }
 
   fmt:       { desc: "golangci-lint fmt", cmds: [golangci-lint fmt] }
   fmt:check: { desc: "golangci-lint fmt --diff", cmds: [golangci-lint fmt --diff] }
   lint:      { desc: "golangci-lint run", cmds: [golangci-lint run] }
   lint:new:  { desc: 'golangci-lint run --new-from-rev="BASE"', cmds: ['golangci-lint run --new-from-rev="{{.BASE}}"'] }
   lint:fix:  { desc: 'golangci-lint run --fix --new-from-rev="BASE"', cmds: ['golangci-lint run --fix --new-from-rev="{{.BASE}}"'] }
-  vuln:      { desc: "go tool govulncheck -show=version ./...", cmds: [go tool govulncheck -show=version ./...] }
+  vuln:      { desc: "govulncheck -show=version [./...]", cmds: ['govulncheck -show=version {{.PKG}}'] }
 
   # ── Workflows (Gates) ────────────────────────────────────────────
 
@@ -41,9 +42,14 @@ tasks:
     deps: [fmt:check, lint, test:race:nocache]
     output: prefixed
 
-  tools:     { desc: "go get -tool gotest.tools/gotestsum golang.org/x/vuln/cmd/govulncheck", cmds: [go get -tool gotest.tools/gotestsum golang.org/x/vuln/cmd/govulncheck] }
+  tools:     { desc: "go install -> gotest.tools/gotestsum@latest golang.org/x/vuln/cmd/govulncheck@latest",  cmds: ["go install gotest.tools/gotestsum@latest", "go install golang.org/x/vuln/cmd/govulncheck@latest"] }
 
   setup: { desc: "[setup:files, tools]", deps: [setup:files, tools] }
+
+  examples:
+    desc: Check building all examples
+    cmds:
+      - go build ./examples/...
 
   setup:files:
     desc: "Fetch missing repo templates (LICENSE, .gitignore, configs...)"

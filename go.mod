@@ -4,7 +4,7 @@ go 1.27.4
 
 require (
 	github.com/nexssp/kernel v1.0.0
-	github.com/nexssp/transport v0.9.1
+	github.com/nexssp/transport v0.20.0
 )
 
 require (
